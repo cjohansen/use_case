@@ -34,6 +34,7 @@ module UseCase
     def pre_condition_failed?; false; end
     def success?; false; end
     def success; end
+    def result; end
     def pre_condition_failed; end
     def failure; end
   end
@@ -50,6 +51,8 @@ module UseCase
       yield @result if block_given?
       @result
     end
+
+    def result; @result; end
 
     def to_s
       "#<UseCase::SuccessfulOutcome: #{@result}>"
