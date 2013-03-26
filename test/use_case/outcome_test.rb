@@ -1,0 +1,144 @@
+# encoding: utf-8
+# --
+# The MIT License (MIT)
+#
+# Copyright (C) 2013 Gitorious AS
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#++
+require "test_helper"
+require "use_case/outcome"
+
+describe UseCase::Outcome do
+  it "exposes use case" do
+    use_case = 42
+    outcome = UseCase::Outcome.new(use_case)
+
+    assert_equal use_case, outcome.use_case
+  end
+
+  it "defaults to not failing and not being successful (noop)" do
+    outcome = UseCase::Outcome.new
+    outcome.success { fail "Shouldn't succeed" }
+    outcome.pre_condition_failed { fail "Shouldn't have failed pre-conditions" }
+    outcome.failure { fail "Shouldn't fail" }
+
+    refute outcome.pre_condition_failed?
+    refute outcome.success?
+  end
+
+  describe UseCase::SuccessfulOutcome do
+    it "exposes use case" do
+      use_case = { :id => 42 }
+      outcome = UseCase::SuccessfulOutcome.new(use_case)
+
+      assert_equal use_case, outcome.use_case
+    end
+
+    it "does not fail" do
+      outcome = UseCase::SuccessfulOutcome.new
+      outcome.pre_condition_failed { fail "Shouldn't have failed pre-conditions" }
+      outcome.failure { fail "Shouldn't fail" }
+
+      refute outcome.pre_condition_failed?
+      assert outcome.success?
+    end
+
+    it "yields and returns result" do
+      result = 42
+      yielded_result = nil
+      outcome = UseCase::SuccessfulOutcome.new(nil, result)
+      returned_result = outcome.success { |res| yielded_result = res }
+
+      assert_equal result, yielded_result
+      assert_equal result, returned_result
+    end
+
+    it "gets result without block" do
+      outcome = UseCase::SuccessfulOutcome.new(nil, 42)
+      assert_equal 42, outcome.success
+    end
+  end
+
+  describe UseCase::PreConditionFailed do
+    it "exposes use case" do
+      use_case = { :id => 42 }
+      outcome = UseCase::PreConditionFailed.new(use_case)
+
+      assert_equal use_case, outcome.use_case
+    end
+
+    it "does not succeed or fail" do
+      outcome = UseCase::PreConditionFailed.new
+      outcome.success { fail "Shouldn't succeed" }
+      outcome.failure { fail "Shouldn't fail" }
+
+      assert outcome.pre_condition_failed?
+      refute outcome.success?
+    end
+
+    it "yields and returns failed pre-condition" do
+      pre_condition = 42
+      yielded_pc = nil
+      outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+      returned_pc = outcome.pre_condition_failed { |pc| yielded_pc = pc }
+
+      assert_equal pre_condition, yielded_pc
+      assert_equal pre_condition, returned_pc
+    end
+
+    it "gets pre_condition without block" do
+      outcome = UseCase::PreConditionFailed.new(nil, 42)
+      assert_equal 42, outcome.pre_condition_failed
+    end
+  end
+
+  describe UseCase::FailedOutcome do
+    it "exposes use case" do
+      use_case = { :id => 42 }
+      outcome = UseCase::FailedOutcome.new(use_case)
+
+      assert_equal use_case, outcome.use_case
+    end
+
+    it "does not succeed or fail pre-conditions" do
+      outcome = UseCase::FailedOutcome.new
+      outcome.success { fail "Shouldn't succeed" }
+      outcome.pre_condition_failed { fail "Shouldn't fail pre-conditions" }
+
+      refute outcome.pre_condition_failed?
+      refute outcome.success?
+    end
+
+    it "yields and returns validation failure" do
+      failure = 42
+      yielded_result = nil
+      outcome = UseCase::FailedOutcome.new(nil, failure)
+      returned_result = outcome.failure { |result| yielded_result = result }
+
+      assert_equal failure, yielded_result
+      assert_equal failure, returned_result
+    end
+
+    it "gets failure without block" do
+      outcome = UseCase::FailedOutcome.new(nil, 42)
+      assert_equal 42, outcome.failure
+    end
+  end
+end
