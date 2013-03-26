@@ -262,6 +262,27 @@ work by the "data in, data out" principle, meaning you can easily test them with
 any kind of object (which spares you of loading heavy ActiveRecord-bound models,
 running opaque controller tets etc).
 
+## Installation
+
+    $ gem install use_case
+
+## Developing
+
+    $ bundle install
+    $ rake
+
+## Contributing
+
+* Clone repo
+* Make changes
+* Add test(s)
+* Run tests
+* If adding new abilities, add docs in Readme, or commit a working example
+* Send patch, [pull request](http://github.com/cjohansen/use_case) or [merge request](http://gitorious.org/gitorious/use_case)
+
+If you intend to add entirely new features, you might want to open an issue to
+discuss it with me first.
+
 ## License
 
 UseCase is free software licensed under the MIT license.
