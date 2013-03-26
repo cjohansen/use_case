@@ -11,45 +11,19 @@ Compose non-trivial business logic into use cases, that combine:
   different contexts etc.
 * Commands: Avoid defensive coding by performing the core actions in commands
   that receive type-converted input, and are only executed when pre-conditions
-  are met and input validated.
+  are met and input is validated.
 
 ## Example
 
-At its very simplest, a use case wraps a command. A command is any Ruby object
-with an `execute` method that receives one argument (input parameters). Because
-UseCase is intended as a mechanism for implementing non-trivial use cases, the
-following contrived example will seem particularly useless.
+`UseCase` is designed to break up and keep non-trivial workflows understandable
+and decoupled. As such, a trivial example would not illustrate what is good
+about it. The following example is simplified, yet still has enough aspects to
+show how `UseCase` helps you break things up.
 
-```rb
-require "use_case"
-
-class HelloWorldCommand
-  def execute(params)
-    puts "Hello, #{params[:place]}!"
-  end
-end
-
-class PrintHelloWorld
-  include UseCase
-
-  def initialize
-    command(HelloWorldCommand.new)
-  end
-end
-
-# Usage
-PrintHelloWorld.new.execute(:place => "World")
-```
-
-Not that you are free to design your constructors any way you want.
-
-## Useful example
-
-A more useful example will use every aspect of a `UseCase`. Pre-conditions are
-conditions not directly related to input parameters, and whose failure signifies
-other forms of errors than simple validation errors. If you have a Rails
-application that uses controller filters, then those are very likely good
-candidates for pre-conditions.
+Pre-conditions are conditions not directly related to input parameters alone,
+and whose failure signifies other forms of errors than simple validation errors.
+If you have a Rails application that uses controller filters, then those are
+very likely good candidates for pre-conditions.
 
 The following example is a simplified use case from
 [Gitorious](http://gitorious.org) where we want to create a new repository. To
@@ -57,19 +31,64 @@ do this, we need a user that can admin the project under which we want the new
 repository to live.
 
 This example illustrates how to solve common design challenges in Rails
-applications, but that does not mean that `UseCase` is only useful to Rails
+applications; that does not mean that `UseCase` is only useful to Rails
 applications.
+
+First, let's look at what your Rails controller will look like using a
+`UseCase`:
+
+```rb
+class RepositoryController < ApplicationController
+  include Gitorious::Authorization # Adds stuff like can_admin?(actor, thing)
+
+  # ...
+
+  def create
+    outcome = CreateRepository.new(self, current_user).execute(params)
+
+    outcome.pre_condition_failed do |condition|
+      redirect_to(login_path) and return if condition.is_a?(UserLoggedInPrecondition)
+      flash[:error] = "You're not allowed to do that"
+      redirect_to project_path
+    end
+
+    outcome.failure do |model|
+      # Render form with validation errors
+      render :new, :locals => { :repository => model }
+    end
+
+    outcome.success do |repository|
+      redirect_to(repository_path(repository))
+    end
+  end
+end
+```
+
+Executing the use case in an `irb` session could look like this:
+
+```rb
+include Gitorious::Authorization
+user = User.find_by_login("christian")
+project = Project.find_by_name("gitorious")
+outcome = CreateRepository.new(self, user).execute(:project => project,
+                                                   :name => "use_case")
+outcome.success? #=> true
+outcome.result.name #=> "use_case"
+```
+
+The code behind this use case follows:
 
 ```rb
 require "use_case"
 require "virtus"
 
-# Input parameters can be sanitized and pre-processed anyway you like. One nice
+# Input parameters can be sanitized and pre-processed any way you like. One nice
 # way to go about it is to use Datamapper 2's Virtus gem to define a parameter
 # set.
 #
 # This class uses Project.find to look up a project by id if project_id is
-# provided and project is not. This is the only class that has
+# provided and project is not. This is the only class that directly touches
+# classes from the Rails application.
 class NewRepositoryInput
   include Virtus
   attribute :name, String
@@ -141,32 +160,6 @@ class CreateRepository
     # Multiple validators can be added if needed
     validator(NewRepositoryValidator)
     command(CreateRepositoryCommand.new(user))
-  end
-end
-
-# Finally, the actual usage. This example is a Rails controller
-class RepositoryController < ApplicationController
-  include Gitorious::Authorization # Adds stuff like can_admin?(actor, thing)
-
-  # ...
-
-  def create
-    outcome = CreateRepository.new(self, current_user).execute(params)
-
-    outcome.pre_condition_failed do |condition|
-      redirect_to(login_path) and return if condition.is_a?(UserLoggedInPrecondition)
-      flash[:error] = "You're not allowed to do that"
-      redirect_to project_path
-    end
-
-    outcome.failure do |model|
-      # Render form with validation errors
-      render :new, :locals => { :repository => model }
-    end
-
-    outcome.success do |repository|
-      redirect_to(repository_path(repository))
-    end
   end
 end
 ```
