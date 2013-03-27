@@ -29,6 +29,14 @@ NewPersonValidator = UseCase::Validator.define do
   validates_presence_of :name
 end
 
+CustomValidator = UseCase::Validator.define do
+  validate :validate_custom
+
+  def validate_custom
+    errors.add(:name, "is not Dude") if name != "Dude"
+  end
+end
+
 class Person
   attr_accessor :name
 end
@@ -47,5 +55,20 @@ describe UseCase::Validator do
 
     refute result.valid?
     assert_equal 1, result.errors.count
+  end
+
+  it "supports custom validators" do
+    result = CustomValidator.call(Person.new)
+
+    refute result.valid?
+    assert_equal 1, result.errors.count
+  end
+
+  it "passes custom validator" do
+    person = Person.new
+    person.name = "Dude"
+    result = CustomValidator.call(person)
+
+    assert result.valid?
   end
 end

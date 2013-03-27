@@ -45,7 +45,7 @@ module UseCase
         end
       end
 
-      klass.instance_eval(&block)
+      klass.class_eval(&block)
       klass
     end
   end
