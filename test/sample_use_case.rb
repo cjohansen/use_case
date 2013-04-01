@@ -94,7 +94,7 @@ end
 class RepositoryBuilder
   attr_reader :name
   def initialize(name); @name = name; end
-  def self.call(params)
+  def self.build(params)
     return new(nil) if params[:name] == "invalid"
     new(params[:name] + "!")
   end
@@ -109,4 +109,17 @@ class CreateRepositoryWithBuilder
     validator(NewRepositoryValidator)
     command(CreateRepositoryCommand.new(user))
   end
+end
+
+class CreateRepositoryWithExplodingBuilder
+  include UseCase
+
+  def initialize(user)
+    input_class(NewRepositoryInput)
+    builder(self)
+    validator(NewRepositoryValidator)
+    command(CreateRepositoryCommand.new(user))
+  end
+
+  def build; raise "Oops"; end
 end

@@ -54,7 +54,11 @@ module UseCase
       return outcome
     end
 
-    input = @builder.call(input) if @builder
+    begin
+      input = @builder.build(input) if @builder
+    rescue Exception => err
+      return PreConditionFailed.new(self, err)
+    end
 
     if outcome = validate_params(input)
       return outcome

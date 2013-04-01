@@ -107,4 +107,10 @@ describe UseCase do
     assert outcome.success?, outcome.failure && outcome.failure.full_messages.join("\n")
     assert_equal "Dude!", outcome.result.name
   end
+
+  it "treats builder error as failed pre-condition" do
+    outcome = CreateRepositoryWithExplodingBuilder.new(@logged_in_user).execute({ :name => "Dude" })
+
+    assert outcome.pre_condition_failed?
+  end
 end
