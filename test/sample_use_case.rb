@@ -90,3 +90,23 @@ class ExplodingRepository
     command(cmd)
   end
 end
+
+class RepositoryBuilder
+  attr_reader :name
+  def initialize(name); @name = name; end
+  def self.call(params)
+    return new(nil) if params[:name] == "invalid"
+    new(params[:name] + "!")
+  end
+end
+
+class CreateRepositoryWithBuilder
+  include UseCase
+
+  def initialize(user)
+    input_class(NewRepositoryInput)
+    builder(RepositoryBuilder)
+    validator(NewRepositoryValidator)
+    command(CreateRepositoryCommand.new(user))
+  end
+end

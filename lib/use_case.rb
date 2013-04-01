@@ -43,12 +43,18 @@ module UseCase
     @command = command
   end
 
+  def builder(builder)
+    @builder = builder
+  end
+
   def execute(params)
     input = @input_class && @input_class.new(params) || params
 
     if outcome = verify_pre_conditions(input)
       return outcome
     end
+
+    input = @builder.call(input) if @builder
 
     if outcome = validate_params(input)
       return outcome

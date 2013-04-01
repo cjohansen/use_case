@@ -88,4 +88,23 @@ describe UseCase do
       use_case.execute(nil)
     end
   end
+
+  it "fails when builder processed inputs fail validation" do
+    outcome = CreateRepositoryWithBuilder.new(@logged_in_user).execute({ :name => "invalid" })
+
+    validation = outcome.failure do |v|
+      refute v.valid?
+      assert_equal 1, v.errors.count
+      assert v.errors[:name]
+    end
+
+    refute_nil validation
+  end
+
+  it "passes builder processed inputs to command" do
+    outcome = CreateRepositoryWithBuilder.new(@logged_in_user).execute({ :name => "Dude" })
+
+    assert outcome.success?, outcome.failure && outcome.failure.full_messages.join("\n")
+    assert_equal "Dude!", outcome.result.name
+  end
 end
