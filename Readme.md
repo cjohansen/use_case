@@ -117,7 +117,7 @@ class UserLoggedInPrecondition
 
   # A pre-condition must define this method
   # Params is an instance of NewRepositoryInput
-  def satiesfied?(params)
+  def satisfied?(params)
     !@user.nil?
   end
 end
@@ -129,13 +129,13 @@ class ProjectAdminPrecondition
     @user = user
   end
 
-  def satiesfied?(params)
+  def satisfied?(params)
     @auth.can_admin?(@user, params.project)
   end
 end
 
 # The business logic. Here we can safely assume that all pre-conditions are
-# satiesfied, and that input is valid and has the correct type.
+# satisfied, and that input is valid and has the correct type.
 class CreateRepositoryCommand
   def initialize(user)
     @user = user
@@ -193,7 +193,7 @@ dependency. To use this feature, `gem install activemodel`.
 
 ## Pre-conditions
 
-A pre-condition is any object that responds to `satiesfied?(params)` where
+A pre-condition is any object that responds to `satisfied?(params)` where
 params will either be a `Hash` or an instance of whatever you passed to
 `input_class`. The method should return `true/false`. If it raises, the outcome
 of the use case will call the `pre_condition_failed` block with the raised
