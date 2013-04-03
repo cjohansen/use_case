@@ -164,6 +164,23 @@ class CreateRepository
 end
 ```
 
+## The use case pipeline at a glance
+
+This is the high-level overview of how `UseCase` strings up a pipeline
+for you to plug in various kinds of business logic:
+
+```
+User input (-> input sanitation) (-> pre-conditions) (-> builder) (-> validations) -> command
+```
+
+* Start with a hash of user input
+* Optionally wrap this in an object that performs type-coercion,
+  enforces types etc. By default, input will be wrapped in an `OpenStruct`
+* Optionally run pre-conditions on the santized input
+* Optionally refine input by running it through a pre-execution "builder"
+* Optionally (refined) input through one or more validators
+* Execute command with (refined) input
+
 ## Input sanitation
 
 In your `UseCase` instance (typically in the constructor), you can call the
@@ -175,6 +192,15 @@ Datamapper 2's [Virtus](https://github.com/solnic/virtus) is a very promising
 solution for input sanitation and some level of type-safety. If you provide a
 `Virtus` backed class as `input_class` you will get an instance of that class as
 `params` in pre-conditions and commands.
+
+## Pre-conditions
+
+A pre-condition is any object that responds to `satisfied?(params)` where
+params will either be a `Hash` or an instance of whatever you passed to
+`input_class`. The method should return `true/false`. If it raises, the outcome
+of the use case will call the `pre_condition_failed` block with the raised
+error. If it fails, the `pre_condition_failed` block will be called with the
+pre-condition instance that failed.
 
 ## Validations
 
@@ -191,14 +217,90 @@ Because `UseCase::Validation` is not a required part of `UseCase`, and people
 may want to control their own dependencies, `activemodel` is _not_ a hard
 dependency. To use this feature, `gem install activemodel`.
 
-## Pre-conditions
+## Builders
 
-A pre-condition is any object that responds to `satisfied?(params)` where
-params will either be a `Hash` or an instance of whatever you passed to
-`input_class`. The method should return `true/false`. If it raises, the outcome
-of the use case will call the `pre_condition_failed` block with the raised
-error. If it fails, the `pre_condition_failed` block will be called with the
-pre-condition instance that failed.
+When user input has passed input sanitation and pre-conditions have
+been satisfied, you can optionally pipe input through a "builder"
+before handing it over to validations and the command.
+
+The builder should be an object with a `build` method. The method will
+be called with santized input. The return value from `build` will be
+passed on to validators and the command.
+
+Builders can be useful if you want to run validations on a domain
+object rather than directly on "dumb" input.
+
+### Example
+
+In a Rails application, the builder is useful to wrap user input in an
+unsaved `ActiveRecord` instance. The unsaved object will be run
+through the validators, and (if found valid), the command can save it
+and perform additional tasks that you possibly do with `ActiveRecord`
+observers now.
+
+This example also shows how to express uniqueness validators when you
+move validations out of your `ActiveRecord` models.
+
+```rb
+require "activemodel"
+require "virtus"
+require "use_case"
+
+class User < ActiveRecord::Base
+  def uniq?
+    user = User.where("lower(name) = ?", name).first
+    user.nil? || user == self
+  end
+end
+
+UserValidator = UseCase::Validator.define do
+  validates_presence_of :name
+  validate :uniqueness
+
+  def uniqueness
+    errors.add(:name, "is taken") if !uniq?
+  end
+end
+
+class NewUserInput
+  include Virtus
+  attribute :name, String
+end
+
+class NewUserCommand
+  def execute(user)
+    user.save!
+    Mailer.user_signup(user).deliver
+    user
+  end
+
+  def build(params)
+    User.new(:name => params.name)
+  end
+end
+
+class CreateUser
+  include UseCase
+
+  def initialize
+    input_class(NewUserInput)
+    validator(UserValidator)
+    cmd = NewUserCommand.new
+    builder(cmd) # Use the command as a builder too
+    command(cmd)
+  end
+end
+
+# Usage:
+outcome = CreateUser.new.execute(:name => "Chris")
+outcome.success? #=> true
+outcome.result #=> #<User name: "Chris">
+```
+
+### Note
+
+I'm not thrilled by `builder` as a name/concept. Suggestions for a
+better name is welcome.
 
 ## Commands
 
