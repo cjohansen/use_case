@@ -40,7 +40,7 @@ class UserLoggedInPrecondition
     @user = user
   end
 
-  def satiesfied?(params)
+  def satisfied?(params)
     @user[:id] == 42
   end
 end
@@ -50,7 +50,7 @@ class ProjectAdminPrecondition
     @user = user
   end
 
-  def satiesfied?(params)
+  def satisfied?(params)
     @user[:name] == params.name
   end
 end

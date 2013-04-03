@@ -71,7 +71,7 @@ module UseCase
   def verify_pre_conditions(input)
     pre_conditions.each do |pc|
       begin
-        return PreConditionFailed.new(self, pc) if !pc.satiesfied?(input)
+        return PreConditionFailed.new(self, pc) if !pc.satisfied?(input)
       rescue Exception => err
         return PreConditionFailed.new(self, err)
       end

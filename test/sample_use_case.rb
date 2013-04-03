@@ -56,12 +56,12 @@ end
 
 class UserLoggedInPrecondition
   def initialize(user); @user = user; end
-  def satiesfied?(params); @user && @user.id == 42; end
+  def satisfied?(params); @user && @user.id == 42; end
 end
 
 class ProjectAdminPrecondition
   def initialize(user); @user = user; end
-  def satiesfied?(params); @user.can_admin?; end
+  def satisfied?(params); @user.can_admin?; end
 end
 
 class CreateRepositoryCommand
