@@ -170,7 +170,7 @@ This is the high-level overview of how `UseCase` strings up a pipeline
 for you to plug in various kinds of business logic:
 
 ```
-User input (-> input sanitation) (-> pre-conditions) (-> builder) (-> validations) -> command
+User input (-> input sanitation) (-> pre-conditions) (-> builder) (-> validations) -> command (-> command...)
 ```
 
 * Start with a hash of user input
@@ -179,7 +179,7 @@ User input (-> input sanitation) (-> pre-conditions) (-> builder) (-> validation
 * Optionally run pre-conditions on the santized input
 * Optionally refine input by running it through a pre-execution "builder"
 * Optionally (refined) input through one or more validators
-* Execute command with (refined) input
+* Execute command(s) with (refined) input
 
 ## Input sanitation
 
@@ -221,11 +221,11 @@ dependency. To use this feature, `gem install activemodel`.
 
 When user input has passed input sanitation and pre-conditions have
 been satisfied, you can optionally pipe input through a "builder"
-before handing it over to validations and the command.
+before handing it over to validations and the commands.
 
 The builder should be an object with a `build` method. The method will
 be called with santized input. The return value from `build` will be
-passed on to validators and the command.
+passed on to validators and the commands.
 
 Builders can be useful if you want to run validations on a domain
 object rather than directly on "dumb" input.
@@ -307,7 +307,12 @@ better name is welcome.
 A command is any Ruby object that defines an `execute(params)` method. Its
 return value will be passed to the outcome's `success` block. Any errors raised
 by this method is not rescued, so be sure to wrap `use_case.execute(params)` in
-a rescue block if you're worried that it raises.
+a rescue block if you're worried that it raises. Better yet, detect known causes
+of exceptions in a pre-condition so you know that the command does not raise.
+
+A use case can execute multiple commands. When you do, the result of the first
+command will be the input to the second command and so on. The result of the
+last command will be the final `outcome.result`.
 
 ## Use cases
 

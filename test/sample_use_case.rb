@@ -26,7 +26,7 @@ require "virtus"
 require "use_case"
 
 class Model
-  attr_reader :id, :name
+  attr_accessor :id, :name
 
   def initialize(id, name)
     @id = id
@@ -119,6 +119,22 @@ class CreateRepositoryWithExplodingBuilder
     builder(self)
     validator(NewRepositoryValidator)
     command(CreateRepositoryCommand.new(user))
+  end
+
+  def build; raise "Oops"; end
+end
+
+class PimpRepositoryCommand
+  def execute(repository); repository.name += " (Pimped)"; repository end
+end
+
+class CreatePimpedRepository
+  include UseCase
+
+  def initialize(user)
+    input_class(NewRepositoryInput)
+    command(CreateRepositoryCommand.new(user))
+    command(PimpRepositoryCommand.new)
   end
 
   def build; raise "Oops"; end

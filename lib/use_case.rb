@@ -40,7 +40,8 @@ module UseCase
   end
 
   def command(command)
-    @command = command
+    @commands ||= []
+    @commands << command
   end
 
   def builder(builder)
@@ -64,7 +65,8 @@ module UseCase
       return outcome
     end
 
-    SuccessfulOutcome.new(self, @command.execute(input))
+    result = @commands.inject(input) { |input, command| command.execute(input) }
+    SuccessfulOutcome.new(self, result)
   end
 
   private

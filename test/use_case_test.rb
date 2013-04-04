@@ -113,4 +113,11 @@ describe UseCase do
 
     assert outcome.pre_condition_failed?
   end
+
+  it "chains two commands" do
+    outcome = CreatePimpedRepository.new(@logged_in_user).execute({ :name => "Mr" })
+
+    assert_equal 1349, outcome.result.id
+    assert_equal "Mr (Pimped)", outcome.result.name
+  end
 end
