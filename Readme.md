@@ -306,7 +306,8 @@ better name is welcome.
 
 ## Commands
 
-A command is any Ruby object that defines an `execute(params)` method. Its
+A command is any Ruby object that defines an `execute(params)` method.
+Alternately, it can be an object that responds to `call` (e.g. a lambda). Its
 return value will be passed to the outcome's `success` block. Any errors raised
 by this method is not rescued, so be sure to wrap `use_case.execute(params)` in
 a rescue block if you're worried that it raises. Better yet, detect known causes

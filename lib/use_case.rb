@@ -56,18 +56,18 @@ module UseCase
 
   private
   def execute_commands(commands, params)
-    result = commands.inject(params) do |input, command|
+    result = commands.inject(params) do |input, cmd|
       begin
-        input = prepare_input(input, command[:builder])
+        input = prepare_input(input, cmd[:builder])
       rescue Exception => err
         return PreConditionFailed.new(self, err)
       end
 
-      if outcome = validate_params(input, command[:validators])
+      if outcome = validate_params(input, cmd[:validators])
         return outcome
       end
 
-      command[:command].execute(input)
+      cmd[:command].send(cmd[:command].respond_to?(:execute) ? :execute : :call, input)
     end
 
     SuccessfulOutcome.new(self, result)

@@ -170,3 +170,11 @@ class CreatePimpedRepository3
     command(cmd, :builder => cmd, :validators => [NewRepositoryValidator, PimpedRepositoryValidator])
   end
 end
+
+class InlineCommand
+  include UseCase
+
+  def initialize
+    command(lambda { |params| params[:name] })
+  end
+end

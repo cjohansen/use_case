@@ -134,4 +134,11 @@ describe UseCase do
     refute outcome.success?
     assert_equal "You cannot win", outcome.failure.errors[:name].join
   end
+
+  it "calls command lambda" do
+    outcome = InlineCommand.new.execute({ :name => "Dissection" })
+
+    assert outcome.success?
+    assert_equal "Dissection", outcome.result
+  end
 end
