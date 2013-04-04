@@ -76,8 +76,7 @@ class CreateRepository
     input_class(NewRepositoryInput)
     pre_condition(UserLoggedInPrecondition.new(user))
     pre_condition(ProjectAdminPrecondition.new(user))
-    validator(NewRepositoryValidator)
-    command(CreateRepositoryCommand.new(user))
+    command(CreateRepositoryCommand.new(user), :validators => NewRepositoryValidator)
   end
 end
 
@@ -105,9 +104,10 @@ class CreateRepositoryWithBuilder
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    builder(RepositoryBuilder)
-    validator(NewRepositoryValidator)
-    command(CreateRepositoryCommand.new(user))
+    command(CreateRepositoryCommand.new(user), {
+        :validators => NewRepositoryValidator,
+        :builder => RepositoryBuilder
+      })
   end
 end
 
@@ -116,16 +116,22 @@ class CreateRepositoryWithExplodingBuilder
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    builder(self)
-    validator(NewRepositoryValidator)
-    command(CreateRepositoryCommand.new(user))
+    command(CreateRepositoryCommand.new(user), :builder => self)
   end
 
   def build; raise "Oops"; end
 end
 
 class PimpRepositoryCommand
-  def execute(repository); repository.name += " (Pimped)"; repository end
+  def build(repository)
+    repository.id = 42
+    repository
+  end
+
+  def execute(repository)
+    repository.name += " (Pimped)"
+    repository
+  end
 end
 
 class CreatePimpedRepository
@@ -136,6 +142,31 @@ class CreatePimpedRepository
     command(CreateRepositoryCommand.new(user))
     command(PimpRepositoryCommand.new)
   end
+end
 
-  def build; raise "Oops"; end
+class CreatePimpedRepository2
+  include UseCase
+
+  def initialize(user)
+    input_class(NewRepositoryInput)
+    command(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder)
+    cmd = PimpRepositoryCommand.new
+    command(cmd, :builder => cmd)
+  end
+end
+
+PimpedRepositoryValidator = UseCase::Validator.define do
+  validate :cannot_win
+  def cannot_win; errors.add(:name, "You cannot win"); end
+end
+
+class CreatePimpedRepository3
+  include UseCase
+
+  def initialize(user)
+    input_class(NewRepositoryInput)
+    command(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder, :validator => NewRepositoryValidator)
+    cmd = PimpRepositoryCommand.new
+    command(cmd, :builder => cmd, :validators => [NewRepositoryValidator, PimpedRepositoryValidator])
+  end
 end

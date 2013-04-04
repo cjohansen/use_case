@@ -30,7 +30,7 @@ The following example is a simplified use case from
 do this, we need a user that can admin the project under which we want the new
 repository to live.
 
-This example illustrates how to solve common design challenges in Rails
+_NB!_ This example illustrates how to solve common design challenges in Rails
 applications; that does not mean that `UseCase` is only useful to Rails
 applications.
 
@@ -157,9 +157,9 @@ class CreateRepository
     input_class(NewRepositoryInput)
     pre_condition(UserLoggedInPrecondition.new(user))
     pre_condition(ProjectAdminPrecondition.new(auth, user))
-    # Multiple validators can be added if needed
-    validator(NewRepositoryValidator)
-    command(CreateRepositoryCommand.new(user))
+    # A command has 0, 1 or many validators (e.g. :validators => [...])
+    # The use case can span multiple commands (see below)
+    command(CreateRepositoryCommand.new(user), :validator => NewRepositoryValidator)
   end
 end
 ```
@@ -170,16 +170,17 @@ This is the high-level overview of how `UseCase` strings up a pipeline
 for you to plug in various kinds of business logic:
 
 ```
-User input (-> input sanitation) (-> pre-conditions) (-> builder) (-> validations) -> command (-> command...)
+User input (-> input sanitation) (-> pre-conditions) [(-> builder) (-> validations) -> command]*
 ```
 
-* Start with a hash of user input
-* Optionally wrap this in an object that performs type-coercion,
-  enforces types etc. By default, input will be wrapped in an `OpenStruct`
-* Optionally run pre-conditions on the santized input
-* Optionally refine input by running it through a pre-execution "builder"
-* Optionally (refined) input through one or more validators
-* Execute command(s) with (refined) input
+1. Start with a hash of user input
+2. Optionally wrap this in an object that performs type-coercion,
+   enforces types etc.
+3. Optionally run pre-conditions on the santized input
+4. Optionally refine input by running it through a pre-execution "builder"
+5. Optionally run (refined) input through one or more validators
+6. Execute command(s) with (refined) input
+7. Repeat steps 4-7 as necessary
 
 ## Input sanitation
 
@@ -205,13 +206,15 @@ pre-condition instance that failed.
 ## Validations
 
 The validator uses `ActiveModel::Validations`, so any Rails validation can go in
-here. The main difference is that the validator is created as a stand-alone
-object that can be used with any model instance. This design allows you to
-define multiple context-sensitive validations for a single object.
+here (except for `validates_uniqueness_of`, which apparently comes from
+elsewhere - see example below for how to work around this). The main difference
+is that the validator is created as a stand-alone object that can be used with
+any model instance. This design allows you to define multiple context-sensitive
+validations for a single object.
 
 You can of course provide your own validation if you want - any object that
 defines `call(object)` and returns something that responds to `valid?` is good.
-I am following the Datamapper project closely in this area.
+I am following the Datamapper2 project closely in this area.
 
 Because `UseCase::Validation` is not a required part of `UseCase`, and people
 may want to control their own dependencies, `activemodel` is _not_ a hard
@@ -221,11 +224,11 @@ dependency. To use this feature, `gem install activemodel`.
 
 When user input has passed input sanitation and pre-conditions have
 been satisfied, you can optionally pipe input through a "builder"
-before handing it over to validations and the commands.
+before handing it over to validations and a command.
 
-The builder should be an object with a `build` method. The method will
-be called with santized input. The return value from `build` will be
-passed on to validators and the commands.
+The builder should be an object with a `build` or a `call` method (if it has
+both, `build` will be preferred). The method will be called with santized input.
+The return value will be passed on to validators and the commands.
 
 Builders can be useful if you want to run validations on a domain
 object rather than directly on "dumb" input.
@@ -284,10 +287,9 @@ class CreateUser
 
   def initialize
     input_class(NewUserInput)
-    validator(UserValidator)
     cmd = NewUserCommand.new
-    builder(cmd) # Use the command as a builder too
-    command(cmd)
+    # Use the command as a builder too
+    command(cmd, :builder => cmd, :validator => UserValidator)
   end
 end
 
@@ -310,10 +312,6 @@ by this method is not rescued, so be sure to wrap `use_case.execute(params)` in
 a rescue block if you're worried that it raises. Better yet, detect known causes
 of exceptions in a pre-condition so you know that the command does not raise.
 
-A use case can execute multiple commands. When you do, the result of the first
-command will be the input to the second command and so on. The result of the
-last command will be the final `outcome.result`.
-
 ## Use cases
 
 A use case simply glues together all the components. Define a class, include
@@ -322,8 +320,19 @@ take any arguments you like, making this solution suitable for DI (dependency
 injection) style designs.
 
 The use case can optionally call `input_class` once, `pre_condition` multiple
-times, and `validator` multiple times. It *must* call `command` once with the
-command object.
+times, and `command` multiple times.
+
+When using multiple commands, input sanitation with the `input_class` is
+performed once only. Pre-conditions are also only checked once - before any
+commands are executed. The use case will then execute the commands:
+
+```
+command_1: sanitizied_input -> (builder ->) (validators ->) command
+command_n: command_n-1 result -> (builder ->) (validators ->) command
+```
+
+In other words, all commands except the first one will be executed with the
+result of the previous command as input.
 
 ## Outcomes
 

@@ -120,4 +120,18 @@ describe UseCase do
     assert_equal 1349, outcome.result.id
     assert_equal "Mr (Pimped)", outcome.result.name
   end
+
+  it "chains two commands with individual builders" do
+    outcome = CreatePimpedRepository2.new(@logged_in_user).execute({ :name => "Mr" })
+
+    assert_equal 42, outcome.result.id
+    assert_equal "Mr! (Pimped)", outcome.result.name
+  end
+
+  it "fails one of three validators" do
+    outcome = CreatePimpedRepository3.new(@logged_in_user).execute({ :name => "Mr" })
+
+    refute outcome.success?
+    assert_equal "You cannot win", outcome.failure.errors[:name].join
+  end
 end

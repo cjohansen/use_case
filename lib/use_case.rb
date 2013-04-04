@@ -31,21 +31,17 @@ module UseCase
     @input_class = input_class
   end
 
-  def validator(validator)
-    validators << validator
-  end
-
   def pre_condition(pc)
     pre_conditions << pc
   end
 
-  def command(command)
+  def command(command, options = {})
     @commands ||= []
-    @commands << command
-  end
-
-  def builder(builder)
-    @builder = builder
+    @commands << {
+      :command => command,
+      :builder => options[:builder],
+      :validators => Array(options[:validators] || options[:validator])
+    }
   end
 
   def execute(params)
@@ -55,21 +51,28 @@ module UseCase
       return outcome
     end
 
-    begin
-      input = @builder.build(input) if @builder
-    rescue Exception => err
-      return PreConditionFailed.new(self, err)
-    end
-
-    if outcome = validate_params(input)
-      return outcome
-    end
-
-    result = @commands.inject(input) { |input, command| command.execute(input) }
-    SuccessfulOutcome.new(self, result)
+    execute_commands(@commands, input)
   end
 
   private
+  def execute_commands(commands, params)
+    result = commands.inject(params) do |input, command|
+      begin
+        input = prepare_input(input, command[:builder])
+      rescue Exception => err
+        return PreConditionFailed.new(self, err)
+      end
+
+      if outcome = validate_params(input, command[:validators])
+        return outcome
+      end
+
+      command[:command].execute(input)
+    end
+
+    SuccessfulOutcome.new(self, result)
+  end
+
   def verify_pre_conditions(input)
     pre_conditions.each do |pc|
       begin
@@ -81,7 +84,13 @@ module UseCase
     nil
   end
 
-  def validate_params(input)
+  def prepare_input(input, builder)
+    return input if !builder
+    return builder.build(input) if builder.respond_to?(:build)
+    builder.call(input)
+  end
+
+  def validate_params(input, validators)
     validators.each do |validator|
       result = validator.call(input)
       return FailedOutcome.new(self, result) if !result.valid?
@@ -90,5 +99,4 @@ module UseCase
   end
 
   def pre_conditions; @pre_conditions ||= []; end
-  def validators; @validators ||= []; end
 end
