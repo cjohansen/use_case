@@ -31,13 +31,13 @@ module UseCase
     @input_class = input_class
   end
 
-  def pre_condition(pc)
+  def add_pre_condition(pc)
     pre_conditions << pc
   end
 
-  def command(command, options = {})
-    @commands ||= []
-    @commands << {
+  def step(command, options = {})
+    @steps ||= []
+    @steps << {
       :command => command,
       :builder => options[:builder],
       :validators => Array(options[:validators] || options[:validator])
@@ -51,23 +51,27 @@ module UseCase
       return outcome
     end
 
-    execute_commands(@commands, input)
+    execute_steps(@steps, input)
   end
 
   private
-  def execute_commands(commands, params)
-    result = commands.inject(params) do |input, cmd|
+  def execute_steps(steps, params)
+    result = steps.inject(params) do |input, step|
       begin
-        input = prepare_input(input, cmd[:builder])
+        input = prepare_input(input, step[:builder])
       rescue Exception => err
         return PreConditionFailed.new(self, err)
       end
 
-      if outcome = validate_params(input, cmd[:validators])
+      if outcome = validate_params(input, step[:validators])
         return outcome
       end
 
-      cmd[:command].send(cmd[:command].respond_to?(:execute) ? :execute : :call, input)
+      if step[:command].respond_to?(:execute)
+        step[:command].execute(input)
+      else
+        step[:command].call(input)
+      end
     end
 
     SuccessfulOutcome.new(self, result)

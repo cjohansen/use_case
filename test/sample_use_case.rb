@@ -74,9 +74,9 @@ class CreateRepository
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    pre_condition(UserLoggedInPrecondition.new(user))
-    pre_condition(ProjectAdminPrecondition.new(user))
-    command(CreateRepositoryCommand.new(user), :validators => NewRepositoryValidator)
+    add_pre_condition(UserLoggedInPrecondition.new(user))
+    add_pre_condition(ProjectAdminPrecondition.new(user))
+    step(CreateRepositoryCommand.new(user), :validators => NewRepositoryValidator)
   end
 end
 
@@ -86,7 +86,7 @@ class ExplodingRepository
   def initialize(user)
     cmd = CreateRepositoryCommand.new(user)
     def cmd.execute(params); raise "Crash!"; end
-    command(cmd)
+    step(cmd)
   end
 end
 
@@ -104,7 +104,7 @@ class CreateRepositoryWithBuilder
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    command(CreateRepositoryCommand.new(user), {
+    step(CreateRepositoryCommand.new(user), {
         :validators => NewRepositoryValidator,
         :builder => RepositoryBuilder
       })
@@ -116,7 +116,7 @@ class CreateRepositoryWithExplodingBuilder
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    command(CreateRepositoryCommand.new(user), :builder => self)
+    step(CreateRepositoryCommand.new(user), :builder => self)
   end
 
   def build; raise "Oops"; end
@@ -139,8 +139,8 @@ class CreatePimpedRepository
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    command(CreateRepositoryCommand.new(user))
-    command(PimpRepositoryCommand.new)
+    step(CreateRepositoryCommand.new(user))
+    step(PimpRepositoryCommand.new)
   end
 end
 
@@ -149,9 +149,9 @@ class CreatePimpedRepository2
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    command(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder)
+    step(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder)
     cmd = PimpRepositoryCommand.new
-    command(cmd, :builder => cmd)
+    step(cmd, :builder => cmd)
   end
 end
 
@@ -165,9 +165,9 @@ class CreatePimpedRepository3
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    command(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder, :validator => NewRepositoryValidator)
     cmd = PimpRepositoryCommand.new
-    command(cmd, :builder => cmd, :validators => [NewRepositoryValidator, PimpedRepositoryValidator])
+    step(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder, :validator => NewRepositoryValidator)
+    step(cmd, :builder => cmd, :validators => [NewRepositoryValidator, PimpedRepositoryValidator])
   end
 end
 
@@ -175,6 +175,6 @@ class InlineCommand
   include UseCase
 
   def initialize
-    command(lambda { |params| params[:name] })
+    step(lambda { |params| params[:name] })
   end
 end

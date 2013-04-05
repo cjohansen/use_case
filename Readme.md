@@ -155,11 +155,12 @@ class CreateRepository
   # any dependencies you need.
   def initialize(auth, user)
     input_class(NewRepositoryInput)
-    pre_condition(UserLoggedInPrecondition.new(user))
-    pre_condition(ProjectAdminPrecondition.new(auth, user))
-    # A command has 0, 1 or many validators (e.g. :validators => [...])
-    # The use case can span multiple commands (see below)
-    command(CreateRepositoryCommand.new(user), :validator => NewRepositoryValidator)
+    add_pre_condition(UserLoggedInPrecondition.new(user))
+    add_pre_condition(ProjectAdminPrecondition.new(auth, user))
+    # A step is comprised of a command with 0, 1 or many validators
+    # (e.g. :validators => [...])
+    # The use case can span multiple steps (see below)
+    step(CreateRepositoryCommand.new(user), :validator => NewRepositoryValidator)
   end
 end
 ```
@@ -170,17 +171,25 @@ This is the high-level overview of how `UseCase` strings up a pipeline
 for you to plug in various kinds of business logic:
 
 ```
-User input (-> input sanitation) (-> pre-conditions) [(-> builder) (-> validations) -> command]*
+User input (-> input sanitation) (-> pre-conditions) -> steps
 ```
 
 1. Start with a hash of user input
 2. Optionally wrap this in an object that performs type-coercion,
    enforces types etc.
 3. Optionally run pre-conditions on the santized input
-4. Optionally refine input by running it through a pre-execution "builder"
-5. Optionally run (refined) input through one or more validators
-6. Execute command(s) with (refined) input
-7. Repeat steps 4-7 as necessary
+4. Execute steps. The initial step is fed the sanitized input, each
+   following command is fed the result from the previous step.
+
+Each step is a pipeline in its own right:
+
+```
+Step: (-> builder) (-> validations) -> command
+```
+
+1. Optionally refine input by running it through a pre-execution "builder"
+2. Optionally run (refined) input through one or more validators
+3. Execute command with (refined) input
 
 ## Input sanitation
 
@@ -222,27 +231,26 @@ dependency. To use this feature, `gem install activemodel`.
 
 ## Builders
 
-When user input has passed input sanitation and pre-conditions have
-been satisfied, you can optionally pipe input through a "builder"
-before handing it over to validations and a command.
+When user input has passed input sanitation and pre-conditions have been
+satisfied, you can optionally pipe input through a "builder" before handing it
+over to validations and a command.
 
 The builder should be an object with a `build` or a `call` method (if it has
 both, `build` will be preferred). The method will be called with santized input.
 The return value will be passed on to validators and the commands.
 
-Builders can be useful if you want to run validations on a domain
-object rather than directly on "dumb" input.
+Builders can be useful if you want to run validations on a domain object rather
+than directly on "dumb" input.
 
 ### Example
 
-In a Rails application, the builder is useful to wrap user input in an
-unsaved `ActiveRecord` instance. The unsaved object will be run
-through the validators, and (if found valid), the command can save it
-and perform additional tasks that you possibly do with `ActiveRecord`
-observers now.
+In a Rails application, the builder is useful to wrap user input in an unsaved
+`ActiveRecord` instance. The unsaved object will be run through the validators,
+and (if found valid), the command can save it and perform additional tasks that
+you possibly do with `ActiveRecord` observers now.
 
-This example also shows how to express uniqueness validators when you
-move validations out of your `ActiveRecord` models.
+This example also shows how to express uniqueness validators when you move
+validations out of your `ActiveRecord` models.
 
 ```rb
 require "activemodel"
@@ -289,7 +297,7 @@ class CreateUser
     input_class(NewUserInput)
     cmd = NewUserCommand.new
     # Use the command as a builder too
-    command(cmd, :builder => cmd, :validator => UserValidator)
+    step(cmd, :builder => cmd, :validator => UserValidator)
   end
 end
 
@@ -299,10 +307,45 @@ outcome.success? #=> true
 outcome.result #=> #<User name: "Chris">
 ```
 
+If the command fails to execute due to validation errors, using the builder
+allows us to access the partial object for re-rendering forms etc. Because this
+is such a common scenario, the command will automatically be used as the builder
+as well if there is no explicit `:builder` option, and the command responds to
+`build`. This means that the command in the previous example could be written as
+so:
+
+```rb
+class CreateUser
+  include UseCase
+
+  def initialize
+    input_class(NewUserInput)
+    step(NewUserCommand.new, :validator => UserValidator)
+  end
+end
+```
+
+When calling `execute` on this use case, we can observe the following flow:
+
+```rb
+# This
+params = { :name => "Dude" }
+CreateUser.new.execute(params)
+
+# ...roughly expands to:
+# (command is the command instance wired in the use case constructor)
+input = NewUserInput.new(params)
+prepared = command.build(input)
+
+if UserValidator.call(prepared).valid?
+  command.execute(prepared)
+end
+```
+
 ### Note
 
-I'm not thrilled by `builder` as a name/concept. Suggestions for a
-better name is welcome.
+I'm not thrilled by `builder` as a name/concept. Suggestions for a better name
+is welcome.
 
 ## Commands
 
@@ -313,6 +356,10 @@ by this method is not rescued, so be sure to wrap `use_case.execute(params)` in
 a rescue block if you're worried that it raises. Better yet, detect known causes
 of exceptions in a pre-condition so you know that the command does not raise.
 
+If the command responds to the `build` message and there is no explicitly
+configured `:builder` for the current step, the command is also used as a
+builder (see example above, under "Builders").
+
 ## Use cases
 
 A use case simply glues together all the components. Define a class, include
@@ -320,16 +367,16 @@ A use case simply glues together all the components. Define a class, include
 take any arguments you like, making this solution suitable for DI (dependency
 injection) style designs.
 
-The use case can optionally call `input_class` once, `pre_condition` multiple
-times, and `command` multiple times.
+The use case can optionally call `input_class` once, `add_pre_condition`
+multiple times, and `step` multiple times.
 
-When using multiple commands, input sanitation with the `input_class` is
+When using multiple steps, input sanitation with the `input_class` is
 performed once only. Pre-conditions are also only checked once - before any
-commands are executed. The use case will then execute the commands:
+steps are executed. The use case will then execute the steps:
 
 ```
-command_1: sanitizied_input -> (builder ->) (validators ->) command
-command_n: command_n-1 result -> (builder ->) (validators ->) command
+step_1: sanitizied_input -> (builder ->) (validators ->) command
+step_n: command_n-1 result -> (builder ->) (validators ->) command
 ```
 
 In other words, all commands except the first one will be executed with the
