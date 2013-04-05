@@ -123,6 +123,13 @@ class CreateRepositoryWithExplodingBuilder
 end
 
 class PimpRepositoryCommand
+  def execute(repository)
+    repository.name += " (Pimped)"
+    repository
+  end
+end
+
+class PimpRepositoryCommandWithBuilder
   def build(repository)
     repository.id = 42
     repository
@@ -150,7 +157,7 @@ class CreatePimpedRepository2
   def initialize(user)
     input_class(NewRepositoryInput)
     step(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder)
-    cmd = PimpRepositoryCommand.new
+    cmd = PimpRepositoryCommandWithBuilder.new
     step(cmd, :builder => cmd)
   end
 end
@@ -165,7 +172,7 @@ class CreatePimpedRepository3
 
   def initialize(user)
     input_class(NewRepositoryInput)
-    cmd = PimpRepositoryCommand.new
+    cmd = PimpRepositoryCommandWithBuilder.new
     step(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder, :validator => NewRepositoryValidator)
     step(cmd, :builder => cmd, :validators => [NewRepositoryValidator, PimpedRepositoryValidator])
   end
@@ -176,5 +183,15 @@ class InlineCommand
 
   def initialize
     step(lambda { |params| params[:name] })
+  end
+end
+
+class ImplicitBuilder
+  include UseCase
+
+  def initialize(user)
+    input_class(NewRepositoryInput)
+    step(CreateRepositoryCommand.new(user), :builder => RepositoryBuilder)
+    step(PimpRepositoryCommandWithBuilder.new)
   end
 end

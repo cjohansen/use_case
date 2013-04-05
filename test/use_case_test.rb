@@ -141,4 +141,11 @@ describe UseCase do
     assert outcome.success?
     assert_equal "Dissection", outcome.result
   end
+
+  it "implicitly uses command as builder" do
+    outcome = ImplicitBuilder.new(@logged_in_user).execute({ :name => "Mr" })
+
+    assert_equal 42, outcome.result.id
+    assert_equal "Mr! (Pimped)", outcome.result.name
+  end
 end

@@ -58,7 +58,7 @@ module UseCase
   def execute_steps(steps, params)
     result = steps.inject(params) do |input, step|
       begin
-        input = prepare_input(input, step[:builder])
+        input = prepare_input(input, step)
       rescue Exception => err
         return PreConditionFailed.new(self, err)
       end
@@ -88,10 +88,11 @@ module UseCase
     nil
   end
 
-  def prepare_input(input, builder)
-    return input if !builder
+  def prepare_input(input, step)
+    builder = step[:builder] || step[:command]
     return builder.build(input) if builder.respond_to?(:build)
-    builder.call(input)
+    return step[:builder].call(input) if step[:builder]
+    input
   end
 
   def validate_params(input, validators)
