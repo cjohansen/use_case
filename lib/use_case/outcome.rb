@@ -63,17 +63,43 @@ module UseCase
     def initialize(use_case = nil, pre_condition = nil)
       super(use_case)
       @pre_condition = pre_condition
+      @failure = PreConditionFailure.new(@pre_condition)
     end
 
     def pre_condition_failed?; true; end
 
     def pre_condition_failed
-      yield @pre_condition if block_given?
+      yield @failure if block_given?
       @pre_condition
     end
 
     def to_s
       "#<UseCase::PreConditionFailed: #{@pre_condition}>"
+    end
+  end
+
+  class PreConditionFailure
+    attr_reader :pre_condition
+    def initialize(pre_condition); @pre_condition = pre_condition; end
+
+    def when(symbol, &block)
+      raise Exception.new("Cannot call when after otherwise") if @otherwise
+      if symbol == class_symbol
+        @called = true
+        yield(@pre_condition)
+      end
+    end
+
+    def otherwise(&block)
+      @otherwise = true
+      yield(@pre_condition) if !@called
+    end
+
+    private
+    def class_symbol
+      klass = @pre_condition.class
+      return klass.symbol if klass.respond_to?(:symbol)
+      klass.name.gsub(/([^A-Z])([A-Z])/, '\1_\2').gsub(/[:_]+/, "_").downcase.to_sym
     end
   end
 

@@ -25,6 +25,10 @@
 require "test_helper"
 require "use_case/outcome"
 
+class MyPreCondition
+  def self.symbol; :something; end
+end
+
 describe UseCase::Outcome do
   it "exposes use case" do
     use_case = 42
@@ -93,19 +97,75 @@ describe UseCase::Outcome do
       refute outcome.success?
     end
 
-    it "yields and returns failed pre-condition" do
+    it "returns failed pre-condition" do
       pre_condition = 42
-      yielded_pc = nil
       outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
-      returned_pc = outcome.pre_condition_failed { |pc| yielded_pc = pc }
+      returned_pc = outcome.pre_condition_failed
 
-      assert_equal pre_condition, yielded_pc
       assert_equal pre_condition, returned_pc
     end
 
-    it "gets pre_condition without block" do
-      outcome = UseCase::PreConditionFailed.new(nil, 42)
-      assert_equal 42, outcome.pre_condition_failed
+    describe "yielded wrapper" do
+      it "has flow control API" do
+        yielded = false
+        pre_condition = Array.new
+        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+
+        returned_pc = outcome.pre_condition_failed do |f|
+          f.when(:array) { |pc| yielded = pc }
+        end
+
+        assert_equal yielded, pre_condition
+      end
+
+      it "does not call non-matching block" do
+        yielded = nil
+        pre_condition = Array.new
+        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+
+        returned_pc = outcome.pre_condition_failed do |f|
+          f.when(:something) { |pc| yielded = pc }
+        end
+
+        assert_nil yielded
+      end
+
+      it "matches by class symbol" do
+        yielded = false
+        pre_condition = MyPreCondition.new
+        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+
+        returned_pc = outcome.pre_condition_failed do |f|
+          f.when(:something) { |pc| yielded = pc }
+        end
+
+        assert_equal yielded, pre_condition
+      end
+
+      it "yields to otherwise if no match" do
+        yielded = false
+        pre_condition = MyPreCondition.new
+        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+
+        returned_pc = outcome.pre_condition_failed do |f|
+          f.when(:nothing) { |pc| yielded = 42 }
+          f.otherwise { |pc| yielded = pc }
+        end
+
+        assert_equal yielded, pre_condition
+      end
+
+      it "raises if calling when after otherwise" do
+        pre_condition = MyPreCondition.new
+        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+
+        assert_raises(Exception) do
+          returned_pc = outcome.pre_condition_failed do |f|
+            f.otherwise { |pc| yielded = pc }
+            f.when(:nothing) { |pc| yielded = 42 }
+          end
+        end
+      end
     end
   end
 

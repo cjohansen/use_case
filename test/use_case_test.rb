@@ -35,8 +35,8 @@ describe UseCase do
   it "fails first pre-condition; no user logged in" do
     outcome = CreateRepository.new(nil).execute({})
 
-    outcome.pre_condition_failed do |pc|
-      assert_equal UserLoggedInPrecondition, pc.class
+    outcome.pre_condition_failed do |f|
+      assert_equal UserLoggedInPrecondition, f.pre_condition.class
     end
   end
 
@@ -44,8 +44,8 @@ describe UseCase do
     @logged_in_user.can_admin = false
     outcome = CreateRepository.new(@logged_in_user).execute({})
 
-    outcome.pre_condition_failed do |pc|
-      assert_equal ProjectAdminPrecondition, pc.class
+    outcome.pre_condition_failed do |f|
+      assert_equal ProjectAdminPrecondition, f.pre_condition.class
     end
   end
 
@@ -53,8 +53,8 @@ describe UseCase do
     def @logged_in_user.id; raise "Oops!"; end
     outcome = CreateRepository.new(@logged_in_user).execute({})
 
-    outcome.pre_condition_failed do |pc|
-      assert_equal RuntimeError, pc.class
+    outcome.pre_condition_failed do |f|
+      assert_equal RuntimeError, f.pre_condition.class
     end
   end
 

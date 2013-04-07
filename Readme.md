@@ -46,10 +46,12 @@ class RepositoryController < ApplicationController
   def create
     outcome = CreateRepository.new(self, current_user).execute(params)
 
-    outcome.pre_condition_failed do |condition|
-      redirect_to(login_path) and return if condition.is_a?(UserLoggedInPrecondition)
-      flash[:error] = "You're not allowed to do that"
-      redirect_to project_path
+    outcome.pre_condition_failed do |f|
+      f.when(:user_required) { redirect_to(login_path) }
+      f.otherwise do
+        flash[:error] = "You're not allowed to do that"
+        redirect_to project_path
+      end
     end
 
     outcome.failure do |model|
@@ -109,7 +111,7 @@ end
 # This is often implemented as a controller filter in many Rails apps.
 # Unfortunately that means we have to duplicate the check when exposing the use
 # case in other contexts (e.g. a stand-alone API app, console API etc).
-class UserLoggedInPrecondition
+class UserRequired
   # The constructor is only used by us and can look and do whever we want
   def initialize(user)
     @user = user
@@ -205,12 +207,79 @@ solution for input sanitation and some level of type-safety. If you provide a
 
 ## Pre-conditions
 
-A pre-condition is any object that responds to `satisfied?(params)` where
-params will either be a `Hash` or an instance of whatever you passed to
-`input_class`. The method should return `true/false`. If it raises, the outcome
-of the use case will call the `pre_condition_failed` block with the raised
-error. If it fails, the `pre_condition_failed` block will be called with the
-pre-condition instance that failed.
+A pre-condition is any object that responds to `satisfied?(params)` where params
+will either be a `Hash` or an instance of whatever you passed to `input_class`.
+The method should return `true/false`. If it raises, the outcome of the use case
+will call the `pre_condition_failed` block with the raised error. If it fails,
+the `pre_condition_failed` block will be called with a failure object wrapping
+the pre-condition instance that failed.
+
+The wrapper failure object provides three methods of interest:
+
+### `when`
+
+The when method allows you to associate a block of code with a specific
+pre-condition. The block is called with the pre-condition instance if that
+pre-condition fails. Because the pre-condition class may not be explicitly
+available in contexts where you want to use `when`, a symbolic representation is
+used.
+
+If you have the following two pre-conditions:
+
+* `UserRequired`
+* `ProjectAdminRequired`
+
+Then you can use `when(:user_required) { |condition ... }` and
+`when(:project_admin_required) { |condition ... }`. If you want control over how
+a class name is symbolized, make the class implement `symbol`, i.e.:
+
+```js
+class UserRequired
+  def self.symbol; :user_plz; end
+  def initialize(user); @user = user; end
+  def satisfied?(params); !@user.nil?; end
+end
+
+# Then:
+
+outcome = use_case.execute(params)
+
+outcome.pre_condition_failed do |f|
+  f.when(:user_plz) { |c| puts "Needs moar user" }
+  # ...
+end
+```
+
+### `otherwise`
+
+`otherwise` is a catch-all that is called if no calls to `when` mention the
+offending pre-condition:
+
+
+```js
+class CreateProject
+  include UseCase
+
+  def initialize(user)
+    add_pre_condition(UserRequired.new(user))
+    add_pre_condition(AdminRequired.new(user))
+    step(CreateProjectCommand.new(user))
+  end
+end
+
+# Then:
+
+outcome = CreateProject.new(current_user).execute(params)
+
+outcome.pre_condition_failed do |f|
+  f.when(:user_required) { |c| puts "Needs moar user" }
+  f.otherwise { |c| puts "#{c.name} pre-condition failed" }
+end
+```
+### `pre_condition`
+
+If you want to roll your own flow control, simply get the offending
+pre-condition from this method.
 
 ## Validations
 
