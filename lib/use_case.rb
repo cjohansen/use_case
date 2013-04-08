@@ -60,7 +60,7 @@ module UseCase
       begin
         input = prepare_input(input, step)
       rescue Exception => err
-        return PreConditionFailed.new(self, err)
+        return PreConditionFailed.new(err)
       end
 
       if outcome = validate_params(input, step[:validators])
@@ -74,15 +74,15 @@ module UseCase
       end
     end
 
-    SuccessfulOutcome.new(self, result)
+    SuccessfulOutcome.new(result)
   end
 
   def verify_pre_conditions(input)
     pre_conditions.each do |pc|
       begin
-        return PreConditionFailed.new(self, pc) if !pc.satisfied?(input)
+        return PreConditionFailed.new(pc) if !pc.satisfied?(input)
       rescue Exception => err
-        return PreConditionFailed.new(self, err)
+        return PreConditionFailed.new(err)
       end
     end
     nil
@@ -98,7 +98,7 @@ module UseCase
   def validate_params(input, validators)
     validators.each do |validator|
       result = validator.call(input)
-      return FailedOutcome.new(self, result, input) if !result.valid?
+      return FailedOutcome.new(result, input) if !result.valid?
     end
     nil
   end

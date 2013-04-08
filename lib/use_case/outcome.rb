@@ -25,12 +25,6 @@
 
 module UseCase
   class Outcome
-    attr_reader :use_case
-
-    def initialize(use_case = nil)
-      @use_case = use_case
-    end
-
     def pre_condition_failed?; false; end
     def success?; false; end
     def success; end
@@ -40,8 +34,7 @@ module UseCase
   end
 
   class SuccessfulOutcome < Outcome
-    def initialize(use_case = nil, result = nil)
-      super(use_case)
+    def initialize(result = nil)
       @result = result
     end
 
@@ -60,8 +53,7 @@ module UseCase
   end
 
   class PreConditionFailed < Outcome
-    def initialize(use_case = nil, pre_condition = nil)
-      super(use_case)
+    def initialize(pre_condition = nil)
       @pre_condition = pre_condition
       @failure = PreConditionFailure.new(@pre_condition)
     end
@@ -105,8 +97,7 @@ module UseCase
   class FailedOutcome < Outcome
     attr_reader :input
 
-    def initialize(use_case = nil, errors = nil, input = nil)
-      super(use_case)
+    def initialize(errors = nil, input = nil)
       @errors = errors
       @input = input
     end

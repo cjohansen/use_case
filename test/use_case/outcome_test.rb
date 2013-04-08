@@ -30,13 +30,6 @@ class MyPreCondition
 end
 
 describe UseCase::Outcome do
-  it "exposes use case" do
-    use_case = 42
-    outcome = UseCase::Outcome.new(use_case)
-
-    assert_equal use_case, outcome.use_case
-  end
-
   it "defaults to not failing and not being successful (noop)" do
     outcome = UseCase::Outcome.new
     outcome.success { fail "Shouldn't succeed" }
@@ -48,13 +41,6 @@ describe UseCase::Outcome do
   end
 
   describe UseCase::SuccessfulOutcome do
-    it "exposes use case" do
-      use_case = { :id => 42 }
-      outcome = UseCase::SuccessfulOutcome.new(use_case)
-
-      assert_equal use_case, outcome.use_case
-    end
-
     it "does not fail" do
       outcome = UseCase::SuccessfulOutcome.new
       outcome.pre_condition_failed { fail "Shouldn't have failed pre-conditions" }
@@ -67,7 +53,7 @@ describe UseCase::Outcome do
     it "yields and returns result" do
       result = 42
       yielded_result = nil
-      outcome = UseCase::SuccessfulOutcome.new(nil, result)
+      outcome = UseCase::SuccessfulOutcome.new(result)
       returned_result = outcome.success { |res| yielded_result = res }
 
       assert_equal result, yielded_result
@@ -75,19 +61,12 @@ describe UseCase::Outcome do
     end
 
     it "gets result without block" do
-      outcome = UseCase::SuccessfulOutcome.new(nil, 42)
+      outcome = UseCase::SuccessfulOutcome.new(42)
       assert_equal 42, outcome.success
     end
   end
 
   describe UseCase::PreConditionFailed do
-    it "exposes use case" do
-      use_case = { :id => 42 }
-      outcome = UseCase::PreConditionFailed.new(use_case)
-
-      assert_equal use_case, outcome.use_case
-    end
-
     it "does not succeed or fail" do
       outcome = UseCase::PreConditionFailed.new
       outcome.success { fail "Shouldn't succeed" }
@@ -99,7 +78,7 @@ describe UseCase::Outcome do
 
     it "returns failed pre-condition" do
       pre_condition = 42
-      outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+      outcome = UseCase::PreConditionFailed.new(pre_condition)
       returned_pc = outcome.pre_condition_failed
 
       assert_equal pre_condition, returned_pc
@@ -109,7 +88,7 @@ describe UseCase::Outcome do
       it "has flow control API" do
         yielded = false
         pre_condition = Array.new
-        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+        outcome = UseCase::PreConditionFailed.new(pre_condition)
 
         returned_pc = outcome.pre_condition_failed do |f|
           f.when(:array) { |pc| yielded = pc }
@@ -121,7 +100,7 @@ describe UseCase::Outcome do
       it "does not call non-matching block" do
         yielded = nil
         pre_condition = Array.new
-        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+        outcome = UseCase::PreConditionFailed.new(pre_condition)
 
         returned_pc = outcome.pre_condition_failed do |f|
           f.when(:something) { |pc| yielded = pc }
@@ -133,7 +112,7 @@ describe UseCase::Outcome do
       it "matches by class symbol" do
         yielded = false
         pre_condition = MyPreCondition.new
-        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+        outcome = UseCase::PreConditionFailed.new(pre_condition)
 
         returned_pc = outcome.pre_condition_failed do |f|
           f.when(:something) { |pc| yielded = pc }
@@ -145,7 +124,7 @@ describe UseCase::Outcome do
       it "yields to otherwise if no match" do
         yielded = false
         pre_condition = MyPreCondition.new
-        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+        outcome = UseCase::PreConditionFailed.new(pre_condition)
 
         returned_pc = outcome.pre_condition_failed do |f|
           f.when(:nothing) { |pc| yielded = 42 }
@@ -157,7 +136,7 @@ describe UseCase::Outcome do
 
       it "raises if calling when after otherwise" do
         pre_condition = MyPreCondition.new
-        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+        outcome = UseCase::PreConditionFailed.new(pre_condition)
 
         assert_raises(Exception) do
           returned_pc = outcome.pre_condition_failed do |f|
@@ -169,7 +148,7 @@ describe UseCase::Outcome do
 
       it "accesses pre-condition symbol" do
         pre_condition = MyPreCondition.new
-        outcome = UseCase::PreConditionFailed.new(nil, pre_condition)
+        outcome = UseCase::PreConditionFailed.new(pre_condition)
         failure = nil
 
         outcome.pre_condition_failed do |f|
@@ -182,13 +161,6 @@ describe UseCase::Outcome do
   end
 
   describe UseCase::FailedOutcome do
-    it "exposes use case" do
-      use_case = { :id => 42 }
-      outcome = UseCase::FailedOutcome.new(use_case)
-
-      assert_equal use_case, outcome.use_case
-    end
-
     it "does not succeed or fail pre-conditions" do
       outcome = UseCase::FailedOutcome.new
       outcome.success { fail "Shouldn't succeed" }
@@ -201,7 +173,7 @@ describe UseCase::Outcome do
     it "yields and returns validation failure" do
       failure = 42
       yielded_result = nil
-      outcome = UseCase::FailedOutcome.new(nil, failure)
+      outcome = UseCase::FailedOutcome.new(failure)
       returned_result = outcome.failure { |result| yielded_result = result }
 
       assert_equal failure, yielded_result
@@ -209,7 +181,7 @@ describe UseCase::Outcome do
     end
 
     it "gets failure without block" do
-      outcome = UseCase::FailedOutcome.new(nil, 42)
+      outcome = UseCase::FailedOutcome.new(42)
       assert_equal 42, outcome.failure
     end
   end
