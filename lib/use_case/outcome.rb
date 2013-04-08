@@ -113,7 +113,7 @@ module UseCase
     end
 
     def failure
-      yield @errors if block_given?
+      yield @errors, @input if block_given?
       @errors
     end
 
