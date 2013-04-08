@@ -44,7 +44,7 @@ module UseCase
     }
   end
 
-  def execute(params)
+  def execute(params = {})
     input = @input_class && @input_class.new(params) || params
 
     if outcome = verify_pre_conditions(input)
