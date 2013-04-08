@@ -84,7 +84,7 @@ module UseCase
 
     def when(symbol, &block)
       raise Exception.new("Cannot call when after otherwise") if @otherwise
-      if symbol == class_symbol
+      if symbol == self.symbol
         @called = true
         yield(@pre_condition)
       end
@@ -95,8 +95,7 @@ module UseCase
       yield(@pre_condition) if !@called
     end
 
-    private
-    def class_symbol
+    def symbol
       klass = @pre_condition.class
       return klass.symbol if klass.respond_to?(:symbol)
       klass.name.gsub(/([^A-Z])([A-Z])/, '\1_\2').gsub(/[:_]+/, "_").downcase.to_sym

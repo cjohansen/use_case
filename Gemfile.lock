@@ -12,7 +12,7 @@ GIT
 PATH
   remote: .
   specs:
-    use_case (0.9.1)
+    use_case (0.10.0)
 
 GEM
   remote: http://rubygems.org/
