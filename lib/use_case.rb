@@ -98,7 +98,7 @@ module UseCase
   def validate_params(input, validators)
     validators.each do |validator|
       result = validator.call(input)
-      return FailedOutcome.new(self, result) if !result.valid?
+      return FailedOutcome.new(self, result, input) if !result.valid?
     end
     nil
   end

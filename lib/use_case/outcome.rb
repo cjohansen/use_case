@@ -104,9 +104,12 @@ module UseCase
   end
 
   class FailedOutcome < Outcome
-    def initialize(use_case = nil, errors = nil)
+    attr_reader :input
+
+    def initialize(use_case = nil, errors = nil, input = nil)
       super(use_case)
       @errors = errors
+      @input = input
     end
 
     def failure
