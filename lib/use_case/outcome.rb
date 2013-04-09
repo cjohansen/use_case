@@ -97,13 +97,12 @@ module UseCase
   class FailedOutcome < Outcome
     attr_reader :input
 
-    def initialize(errors = nil, input = nil)
+    def initialize(errors = nil)
       @errors = errors
-      @input = input
     end
 
     def failure
-      yield @errors, @input if block_given?
+      yield @errors if block_given?
       @errors
     end
 
