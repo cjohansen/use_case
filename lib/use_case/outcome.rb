@@ -88,6 +88,7 @@ module UseCase
     end
 
     def symbol
+      return @pre_condition.symbol if @pre_condition.respond_to?(:symbol)
       klass = @pre_condition.class
       return klass.symbol if klass.respond_to?(:symbol)
       klass.name.gsub(/([^A-Z])([A-Z])/, '\1_\2').gsub(/[:_]+/, "_").downcase.to_sym

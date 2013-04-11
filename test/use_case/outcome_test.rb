@@ -157,6 +157,19 @@ describe UseCase::Outcome do
 
         assert_equal :something, failure.symbol
       end
+
+      it "accesses pre-condition instance symbol" do
+        pre_condition = MyPreCondition.new
+        def pre_condition.symbol; :other; end
+        outcome = UseCase::PreConditionFailed.new(pre_condition)
+        failure = nil
+
+        outcome.pre_condition_failed do |f|
+          failure = f
+        end
+
+        assert_equal :other, failure.symbol
+      end
     end
   end
 
