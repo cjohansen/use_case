@@ -76,12 +76,12 @@ describe UseCase::Outcome do
       refute outcome.success?
     end
 
-    it "returns failed pre-condition" do
+    it "returns failed pre-condition wrapped" do
       pre_condition = 42
       outcome = UseCase::PreConditionFailed.new(pre_condition)
       returned_pc = outcome.pre_condition_failed
 
-      assert_equal pre_condition, returned_pc
+      assert_equal pre_condition, returned_pc.pre_condition
     end
 
     describe "yielded wrapper" do
@@ -102,7 +102,7 @@ describe UseCase::Outcome do
         pre_condition = Array.new
         outcome = UseCase::PreConditionFailed.new(pre_condition)
 
-        returned_pc = outcome.pre_condition_failed do |f|
+        outcome.pre_condition_failed do |f|
           f.when(:something) { |pc| yielded = pc }
         end
 

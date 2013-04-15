@@ -62,7 +62,7 @@ module UseCase
 
     def pre_condition_failed
       yield @failure if block_given?
-      @pre_condition
+      @failure
     end
 
     def to_s
