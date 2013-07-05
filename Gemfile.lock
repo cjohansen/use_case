@@ -30,6 +30,8 @@ GEM
       ice_nine (~> 0.7.0)
     backports (3.1.1)
     builder (3.0.4)
+    ci_reporter (1.9.0)
+      builder (>= 2.1.2)
     coercible (0.2.0)
       backports (~> 3.0, >= 3.1.0)
       descendants_tracker (~> 0.0.1)
@@ -39,13 +41,21 @@ GEM
     minitest (4.7.0)
     multi_json (1.6.1)
     rake (10.0.3)
+    rcov (1.0.0)
+    simplecov (0.7.1)
+      multi_json (~> 1.0)
+      simplecov-html (~> 0.7.1)
+    simplecov-html (0.7.1)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   activemodel
+  ci_reporter
   minitest (~> 4)
   rake
+  rcov
+  simplecov
   use_case!
   virtus!
