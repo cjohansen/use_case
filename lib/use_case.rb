@@ -57,11 +57,7 @@ module UseCase
   private
   def execute_steps(steps, params)
     result = steps.inject(params) do |input, step|
-      begin
-        input = prepare_input(input, step)
-      rescue Exception => err
-        return PreConditionFailed.new(err)
-      end
+      input = prepare_input(input, step)
 
       if outcome = validate_params(input, step[:validators])
         return outcome
@@ -79,11 +75,7 @@ module UseCase
 
   def verify_pre_conditions(input)
     pre_conditions.each do |pc|
-      begin
-        return PreConditionFailed.new(pc) if !pc.satisfied?(input)
-      rescue Exception => err
-        return PreConditionFailed.new(err)
-      end
+      return PreConditionFailed.new(pc) if !pc.satisfied?(input)
     end
     nil
   end

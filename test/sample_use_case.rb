@@ -119,7 +119,7 @@ class CreateRepositoryWithExplodingBuilder
     step(CreateRepositoryCommand.new(user), :builder => self)
   end
 
-  def build; raise "Oops"; end
+  def build(params); raise "Oops"; end
 end
 
 class PimpRepositoryCommand

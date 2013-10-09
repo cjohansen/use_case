@@ -51,10 +51,9 @@ describe UseCase do
 
   it "fails with error if pre-condition raises" do
     def @logged_in_user.id; raise "Oops!"; end
-    outcome = CreateRepository.new(@logged_in_user).execute({})
 
-    outcome.pre_condition_failed do |f|
-      assert_equal RuntimeError, f.pre_condition.class
+    assert_raises RuntimeError do
+      CreateRepository.new(@logged_in_user).execute({})
     end
   end
 
@@ -109,9 +108,9 @@ describe UseCase do
   end
 
   it "treats builder error as failed pre-condition" do
-    outcome = CreateRepositoryWithExplodingBuilder.new(@logged_in_user).execute({ :name => "Dude" })
-
-    assert outcome.pre_condition_failed?
+    assert_raises RuntimeError do
+      CreateRepositoryWithExplodingBuilder.new(@logged_in_user).execute({ :name => "Dude" })
+    end
   end
 
   it "chains two commands" do
