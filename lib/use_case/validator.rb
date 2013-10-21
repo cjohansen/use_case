@@ -38,6 +38,10 @@ module UseCase
           @target.send(name, *args, &block)
         end
 
+        def respond_to_missing?(name, include_all)
+          @target.respond_to?(name)
+        end
+
         def self.call(object)
           validator = new(object)
           validator.valid?

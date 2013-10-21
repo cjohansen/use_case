@@ -42,6 +42,15 @@ class Person
 end
 
 describe UseCase::Validator do
+  it "delegates all calls to underlying object" do
+    person = Person.new
+    person.name = "Christian"
+    result = NewPersonValidator.call(person)
+
+    assert result.respond_to?(:name)
+    assert_equal "Christian", result.name
+  end
+
   it "passes valid object" do
     person = Person.new
     person.name = "Christian"
