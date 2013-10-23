@@ -10,3 +10,4 @@ gem "activemodel"
 
 gem "ci_reporter"
 gem "simplecov"
+gem "simplecov-rcov"
