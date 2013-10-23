@@ -9,5 +9,4 @@ gem "virtus", :git => "https://github.com/solnic/virtus.git"
 gem "activemodel"
 
 gem "ci_reporter"
-gem "rcov", :platforms => :ruby_18
-gem "simplecov", :platforms => :ruby_19
+gem "simplecov"
