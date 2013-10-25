@@ -46,7 +46,7 @@ class User < Model
 end
 
 class NewRepositoryInput
-  include Virtus
+  include Virtus.model
   attribute :name, String
 end
 

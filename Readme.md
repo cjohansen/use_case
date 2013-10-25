@@ -92,7 +92,7 @@ require "virtus"
 # provided and project is not. This is the only class that directly touches
 # classes from the Rails application.
 class NewRepositoryInput
-  include Virtus
+  include Virtus.model
   attribute :name, String
   attribute :description, String
   attribute :project, Project
@@ -343,7 +343,7 @@ UserValidator = UseCase::Validator.define do
 end
 
 class NewUserInput
-  include Virtus
+  include Virtus.model
   attribute :name, String
 end
 

@@ -2,7 +2,7 @@ source "http://rubygems.org"
 gemspec
 
 # Only used for tests
-gem "virtus", :git => "https://github.com/solnic/virtus.git"
+gem "virtus"
 
 # Validations are optional, but required in order to test UseCase
 # itself
